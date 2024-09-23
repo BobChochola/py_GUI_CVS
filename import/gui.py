@@ -14,11 +14,12 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QCheckBox,
-    QRadioButton,
-    QGroupBox,
     QFileDialog,
     QMessageBox,
     QSpinBox,
+    QComboBox,
+    QRadioButton,
+    QButtonGroup,
 )
 from PyQt6.QtCore import Qt
 
@@ -37,22 +38,30 @@ def generate_line_uid():
     return uid if re.match(r"^U[0-9a-f]{32}$", uid) else None
 
 
-def generate_phone_number(country_code, include_plus, format_pattern):
-    phone_number = f"{random.randint(100000000, 999999999)}"
+def generate_phone_number(country, include_country_code, include_plus, format_pattern):
+    if country == "Taiwan":
+        phone_number = f"{random.randint(10000000, 99999999)}"
+        if include_country_code:
+            full_number = f"8869{phone_number}"
+        else:
+            full_number = f"09{phone_number}"
+    elif country == "Hong Kong":
+        phone_number = f"{random.randint(10000000, 99999999)}"
+        if include_country_code:
+            full_number = f"852{phone_number}"
+        else:
+            full_number = f"9{phone_number}"
 
-    if country_code:
-        if include_plus:
-            return (
-                f"+{country_code}{phone_number}"
-                if not format_pattern
-                else f"+{country_code} {phone_number[:4]} {phone_number[4:]}"
-            )
-        return (
-            f"{country_code}{phone_number}"
-            if not format_pattern
-            else f"{country_code} {phone_number[:4]} {phone_number[4:]}"
-        )
-    return phone_number if not format_pattern else f"{phone_number[:4]} {phone_number[4:]}"
+    if include_country_code and include_plus:
+        full_number = f"+{full_number}"
+
+    if format_pattern:
+        if country == "Taiwan":
+            return f"{full_number[:4]} {full_number[4:]}"
+        elif country == "Hong Kong":
+            return f"{full_number[:4]} {full_number[4:8]}"
+
+    return full_number
 
 
 def hash_phone_number(phone_number):
@@ -74,45 +83,28 @@ def generate_email(length, format_check, hash_email):
     return email
 
 
-def generate_tags(tags, distribute_evenly, amount, random_tag_count=False, min_tags=1, max_tags=3):
+def generate_tags(tags, tag_option, amount, random_tag_count=False, min_tags=1, max_tags=3):
     all_tags = []
     for i in range(amount):
-        if random_tag_count:
-            num_tags = random.randint(min_tags, max_tags)
-            all_tags.append(random.sample(tags, k=num_tags))
-        else:
-            if distribute_evenly:
-                all_tags.append([tags[i % len(tags)]])
+        if tag_option == "all_in_one":
+            all_tags.append(tags)
+        elif tag_option == "separate_columns":
+            all_tags.append(tags)  # 不限制標籤數量
+        elif tag_option == "random":
+            if random_tag_count:
+                num_tags = random.randint(min_tags, min(max_tags, len(tags)))
+                all_tags.append(random.sample(tags, k=num_tags))
             else:
-                all_tags.append([random.choice(tags)])
+                all_tags.append(random.sample(tags, k=1))
     return all_tags
 
 
-def export_to_csv(
-    data_list,
-    include_title,
-    line_uid_title,
-    member_id_title,
-    phone_number_title,
-    tag_title,
-    email_title,
-    file_path,
-):
-    with open(file_path, mode='w', newline='') as file:
+def export_to_csv(data_list, include_title, columns, file_path):
+    with open(file_path, mode='w', newline='', encoding='utf-8-sig') as file:
         writer = csv.writer(file)
 
         if include_title:
-            header = []
-            if line_uid_title:
-                header.append(line_uid_title)
-            if member_id_title:
-                header.append(member_id_title)
-            if phone_number_title:
-                header.append(phone_number_title)
-            if email_title:
-                header.append(email_title)
-            header.append(tag_title)
-            writer.writerow(header)
+            writer.writerow(columns)
 
         for row in data_list:
             writer.writerow(row)
@@ -129,13 +121,29 @@ class MemberListGenerator(QWidget):
         self.amount_label = QLabel('生成成員數量:')
         self.amount_input = QLineEdit(self)
 
-        self.include_uid_checkbox = QCheckBox('包含 LINE UID', self)
+        self.include_uid_checkbox = QCheckBox('包含 LINE User ID', self)
         self.include_member_id_checkbox = QCheckBox('包含會員編號', self)
         self.include_phone_checkbox = QCheckBox('包含電話號碼', self)
+        self.include_phone_checkbox.stateChanged.connect(self.toggle_country_code_checkbox)
+        self.include_country_code_checkbox = QCheckBox('包括國碼', self)
+        self.include_country_code_checkbox.setVisible(False)
         self.include_email_checkbox = QCheckBox('包含 Email', self)
+
+        self.country_label = QLabel('選擇國家:')
+        self.country_combo = QComboBox(self)
+        self.country_combo.addItems(["Taiwan", "Hong Kong"])
 
         self.tags_label = QLabel('輸入標籤（用逗號分隔）:')
         self.tags_input = QLineEdit(self)
+
+        self.tag_option_group = QButtonGroup(self)
+        self.all_tags_in_one_radio = QRadioButton("所有標籤放置於 Tags 欄位")
+        self.separate_tags_radio = QRadioButton("各個標籤放置不同欄位 (E.g. Tag1, Tag2...)")
+        self.random_tags_radio = QRadioButton("隨機(需搭配下面選項使用)")
+        self.tag_option_group.addButton(self.all_tags_in_one_radio)
+        self.tag_option_group.addButton(self.separate_tags_radio)
+        self.tag_option_group.addButton(self.random_tags_radio)
+        self.all_tags_in_one_radio.setChecked(True)
 
         self.random_tag_count_checkbox = QCheckBox('隨機生成標籤數量', self)
         self.min_tags_label = QLabel('最小標籤數量:')
@@ -154,9 +162,15 @@ class MemberListGenerator(QWidget):
         layout.addWidget(self.include_uid_checkbox)
         layout.addWidget(self.include_member_id_checkbox)
         layout.addWidget(self.include_phone_checkbox)
+        layout.addWidget(self.include_country_code_checkbox)
         layout.addWidget(self.include_email_checkbox)
+        layout.addWidget(self.country_label)
+        layout.addWidget(self.country_combo)
         layout.addWidget(self.tags_label)
         layout.addWidget(self.tags_input)
+        layout.addWidget(self.all_tags_in_one_radio)
+        layout.addWidget(self.separate_tags_radio)
+        layout.addWidget(self.random_tags_radio)
         layout.addWidget(self.random_tag_count_checkbox)
         layout.addWidget(self.min_tags_label)
         layout.addWidget(self.min_tags_spinbox)
@@ -166,21 +180,48 @@ class MemberListGenerator(QWidget):
 
         self.setLayout(layout)
 
+    def toggle_country_code_checkbox(self):
+        self.include_country_code_checkbox.setVisible(self.include_phone_checkbox.isChecked())
+
     def generate_member_list(self):
         try:
             amount = int(self.amount_input.text())
             include_uid = self.include_uid_checkbox.isChecked()
             include_member_id = self.include_member_id_checkbox.isChecked()
             include_phone = self.include_phone_checkbox.isChecked()
+            include_country_code = self.include_country_code_checkbox.isChecked()
             include_email = self.include_email_checkbox.isChecked()
+            country = self.country_combo.currentText()
 
-            tags = self.tags_input.text().split(',')
+            tags = [tag.strip() for tag in self.tags_input.text().split(',') if tag.strip()]
             random_tag_count = self.random_tag_count_checkbox.isChecked()
             min_tags = self.min_tags_spinbox.value()
             max_tags = self.max_tags_spinbox.value()
 
+            tag_option = "all_in_one"
+            if self.separate_tags_radio.isChecked():
+                tag_option = "separate_columns"
+            elif self.random_tags_radio.isChecked():
+                tag_option = "random"
+
+            tags_list = generate_tags(
+                tags, tag_option, amount, random_tag_count, min_tags, max_tags
+            )
+
             data_list = []
-            tags_list = generate_tags(tags, False, amount, random_tag_count, min_tags, max_tags)
+            columns = []
+            if include_uid:
+                columns.append('LINE User ID')
+            if include_member_id:
+                columns.append('Member ID')
+            if include_phone:
+                columns.append('Phone')
+            if include_email:
+                columns.append('Email')
+            if tag_option == "separate_columns":
+                columns.extend([f'Tag{i+1}' for i in range(len(tags))])
+            else:
+                columns.append('Tags')
 
             for i in range(amount):
                 member_data = []
@@ -194,14 +235,19 @@ class MemberListGenerator(QWidget):
                     member_data.append(member_id)
 
                 if include_phone:
-                    phone = generate_phone_number('886', True, False)
+                    phone = generate_phone_number(
+                        country, self.include_country_code_checkbox.isChecked(), True, False
+                    )
                     member_data.append(phone)
 
                 if include_email:
                     email = generate_email(10, True, False)
                     member_data.append(email)
 
-                member_data.append(', '.join(tags_list[i]))
+                if tag_option == "separate_columns":
+                    member_data.extend(tags_list[i] + [''] * (len(tags) - len(tags_list[i])))
+                else:
+                    member_data.append(', '.join(tags_list[i]))
 
                 data_list.append(member_data)
 
@@ -209,9 +255,7 @@ class MemberListGenerator(QWidget):
                 self, 'Save CSV', os.path.expanduser('~/Downloads'), 'CSV files (*.csv)'
             )
             if file_path:
-                export_to_csv(
-                    data_list, True, 'LINE UID', 'Member ID', 'Phone', 'Tags', 'Email', file_path
-                )
+                export_to_csv(data_list, True, columns, file_path)
                 QMessageBox.information(self, 'Success', f'檔案已匯出到: {file_path}')
             else:
                 QMessageBox.warning(self, 'Warning', '未選擇保存路徑')

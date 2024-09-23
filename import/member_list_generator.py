@@ -48,26 +48,30 @@ def export_to_csv(
     line_uid_title,
     member_id_title,
     phone_number_title,
-    email_title,
     tag_title,
+    email_title,
+    file_path,
 ):
-    headers = []
-    if line_uid_title:
-        headers.append("Line UID")
-    if member_id_title:
-        headers.append("Member ID")
-    if phone_number_title:
-        headers.append("Phone Number")
-    if email_title:
-        headers.append("Email")
-    headers.append("Tags")
-
-    file_path = os.path.expanduser("~/Downloads/member_list.csv")
-    with open(file_path, mode='w', newline='', encoding='utf-8') as file:
+    with open(file_path, mode='w', newline='') as file:
         writer = csv.writer(file)
+
+        # If include_title is True, add the selected titles
         if include_title:
-            writer.writerow(headers)
-        writer.writerows(data_list)
+            header = []
+            if line_uid_title:
+                header.append(line_uid_title)
+            if member_id_title:
+                header.append(member_id_title)
+            if phone_number_title:
+                header.append(phone_number_title)
+            if email_title:
+                header.append(email_title)
+            header.append(tag_title)  # Tags are always included
+            writer.writerow(header)
+
+        # Write the data rows
+        for row in data_list:
+            writer.writerow(row)
 
     return file_path
 
