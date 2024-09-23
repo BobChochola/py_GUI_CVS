@@ -1,0 +1,3 @@
+([('MemberListGenerator',
+   '/Users/BobChen/Desktop/import/dist/MemberListGenerator',
+   'EXECUTABLE')],)
