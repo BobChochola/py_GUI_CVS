@@ -1,3 +1,3 @@
 ([('MemberListGenerator',
-   '/Users/BobChen/Desktop/import/dist/MemberListGenerator',
+   '/Users/BobChen/Desktop/py_GUI_CVS/import/dist/MemberListGenerator',
    'EXECUTABLE')],)
