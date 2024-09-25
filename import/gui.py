@@ -20,8 +20,12 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QRadioButton,
     QButtonGroup,
+    QScrollArea,
+    QGroupBox,
 )
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QFont, QColor
+from styles import StyleSheet
 
 
 def generate_member_id(include_letters, letter_count, id_length):
@@ -117,6 +121,8 @@ class MemberListGenerator(QWidget):
 
     def initUI(self):
         self.setWindowTitle('Member List Generator')
+        self.setStyleSheet(StyleSheet.MAIN)
+        self.setMinimumWidth(450)
 
         self.amount_label = QLabel('生成成員數量:')
         self.amount_input = QLineEdit(self)
