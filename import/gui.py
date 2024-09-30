@@ -37,6 +37,12 @@ def generate_member_id(include_letters, letter_count, id_length):
         return ''.join(random.choices('0123456789', k=id_length))
 
 
+def generate_psid_id(include_letters, letter_count, id_length):
+    if include_letters:
+        numbers = ''.join(random.choices('0123456789', k=id_length - letter_count))
+        return numbers
+
+
 def generate_line_uid():
     uid = 'U' + ''.join(random.choices('0123456789abcdef', k=32))
     return uid if re.match(r"^U[0-9a-f]{32}$", uid) else None
@@ -256,7 +262,7 @@ class MemberListGenerator(QWidget):
                     member_data.append(email)
 
                 if include_psid:
-                    psid = generate_member_id(True, 32, 33)
+                    psid = generate_psid_id(True, 0, 16)
                     member_data.append(psid)
 
                 if tag_option == "separate_columns":
