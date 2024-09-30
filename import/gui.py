@@ -93,7 +93,7 @@ def generate_tags(tags, tag_option, amount, random_tag_count=False, min_tags=1, 
         if tag_option == "all_in_one":
             all_tags.append(tags)
         elif tag_option == "separate_columns":
-            all_tags.append(tags)  # 不限制標籤數量
+            all_tags.append(tags)
         elif tag_option == "random":
             if random_tag_count:
                 num_tags = random.randint(min_tags, min(max_tags, len(tags)))
@@ -134,6 +134,7 @@ class MemberListGenerator(QWidget):
         self.include_country_code_checkbox = QCheckBox('包括國碼', self)
         self.include_country_code_checkbox.setVisible(False)
         self.include_email_checkbox = QCheckBox('包含 Email', self)
+        self.include_psid_checkbox = QCheckBox('包含 PSID', self)
 
         self.country_label = QLabel('選擇國家:')
         self.country_combo = QComboBox(self)
@@ -170,6 +171,7 @@ class MemberListGenerator(QWidget):
         layout.addWidget(self.include_phone_checkbox)
         layout.addWidget(self.include_country_code_checkbox)
         layout.addWidget(self.include_email_checkbox)
+        layout.addWidget(self.include_psid_checkbox)
         layout.addWidget(self.country_label)
         layout.addWidget(self.country_combo)
         layout.addWidget(self.tags_label)
@@ -197,6 +199,7 @@ class MemberListGenerator(QWidget):
             include_phone = self.include_phone_checkbox.isChecked()
             include_country_code = self.include_country_code_checkbox.isChecked()
             include_email = self.include_email_checkbox.isChecked()
+            include_psid = self.include_psid_checkbox.isChecked()
             country = self.country_combo.currentText()
 
             tags = [tag.strip() for tag in self.tags_input.text().split(',') if tag.strip()]
@@ -224,6 +227,8 @@ class MemberListGenerator(QWidget):
                 columns.append('Phone')
             if include_email:
                 columns.append('Email')
+            if include_psid:
+                columns.append('PSID')
             if tag_option == "separate_columns":
                 columns.extend([f'Tag{i+1}' for i in range(len(tags))])
             else:
@@ -250,6 +255,10 @@ class MemberListGenerator(QWidget):
                     email = generate_email(10, True, False)
                     member_data.append(email)
 
+                if include_psid:
+                    psid = generate_member_id(True, 32, 33)
+                    member_data.append(psid)
+
                 if tag_option == "separate_columns":
                     member_data.extend(tags_list[i] + [''] * (len(tags) - len(tags_list[i])))
                 else:
@@ -274,6 +283,6 @@ class MemberListGenerator(QWidget):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    window = MemberListGenerator()
-    window.show()
+    generator = MemberListGenerator()
+    generator.show()
     sys.exit(app.exec())

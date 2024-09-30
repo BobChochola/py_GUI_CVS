@@ -55,7 +55,6 @@ def export_to_csv(
     with open(file_path, mode='w', newline='') as file:
         writer = csv.writer(file)
 
-        # If include_title is True, add the selected titles
         if include_title:
             header = []
             if line_uid_title:
@@ -66,10 +65,9 @@ def export_to_csv(
                 header.append(phone_number_title)
             if email_title:
                 header.append(email_title)
-            header.append(tag_title)  # Tags are always included
+            header.append(tag_title)
             writer.writerow(header)
 
-        # Write the data rows
         for row in data_list:
             writer.writerow(row)
 
